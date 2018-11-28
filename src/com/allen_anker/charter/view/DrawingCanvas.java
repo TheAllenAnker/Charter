@@ -44,10 +44,10 @@ public class DrawingCanvas extends JPanel {
 
         // draw the values on x-axis
         for (int i = CharterFrame.ORIGIN_X, j = 0; i <= CharterFrame.XAxis_X; i += CharterFrame.TIME_INTERVAL,
-                j += CharterFrame.TIME_INTERVAL) {
+                j += 1) {
             g.drawString("" + j, i, CharterFrame.ORIGIN_Y + CharterFrame.X_VALUE_MARGIN);
         }
-        g.drawString("Number of 2Bytes", CharterFrame.XAxis_X + 5, CharterFrame.XAxis_Y + 5);
+        g.drawString("Timeline/s", CharterFrame.XAxis_X + 5, CharterFrame.XAxis_Y + 5);
         g.drawString(CharterFrame.MAX_NUMBER_OF_VALUE * 2 + " Bytes in the Window", CharterFrame.XAxis_X + 5,
                 CharterFrame.XAxis_Y - 8);
 
@@ -56,7 +56,7 @@ public class DrawingCanvas extends JPanel {
                 j += CharterFrame.TIME_INTERVAL) {
             g.drawString((j << 8) + "", CharterFrame.ORIGIN_X - CharterFrame.Y_VALUE_MARGIN, i);
         }
-        g.drawString("Value of the Two Bytes", CharterFrame.YAxis_X - 5, CharterFrame.YAxis_Y - 5);
+        g.drawString("Value of the Two Bytes", CharterFrame.YAxis_X - 5, CharterFrame.YAxis_Y + 15);
         // draw the grid
         g.setColor(Color.BLACK);
         for (int i = CharterFrame.ORIGIN_Y; i > CharterFrame.YAxis_Y; i -= CharterFrame.DATA_INTERVAL) {

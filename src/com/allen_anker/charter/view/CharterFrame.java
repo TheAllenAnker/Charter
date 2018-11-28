@@ -3,7 +3,10 @@ package com.allen_anker.charter.view;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -11,14 +14,16 @@ import java.util.List;
 public class CharterFrame extends JFrame {
     // data container
     private List<Integer> values;
-    private OriginalDataCanvas originalDataCurveCanvas;
+    private List<Integer> averageValues;
+    private int currentAverage = 0;
+    private int dataSize = 0;
 
     static final int MAX_NUMBER_OF_VALUE = 120;
 
     // frame start point
     // FRAME_X and FRAME_Y is also the left and top margin of the coordinates respectively
     static final int FRAME_X = 40;
-    private static final int FRAME_Y = 180;
+    private static final int FRAME_Y = 150;
     static final int FRAME_WIDTH = 600;
     private static final int FRAME_HEIGHT = 250;
 
@@ -38,9 +43,33 @@ public class CharterFrame extends JFrame {
     static final int X_VALUE_MARGIN = 20;
     static final int Y_VALUE_MARGIN = 30;
 
-    private boolean newFile = true;
+    private static final int DRAWING_INTERVAL = 100;
+
+    private boolean readingSignal = true;
     private File file;
     private long readFrom = 0;
+    private long endsAt = 0;
+
+    private OriginalDataCanvas originalDataCurveCanvas;
+    private OriginalDataCanvas averageDataCurveCanvas;
+
+    private JPanel upperPanel;
+    private JButton chooseFileButton;
+    private JButton startButton;
+    private JButton resumeButton;
+    private JButton pauseButton;
+    private JButton stopButton;
+    private JTextField startPosition;
+    private JTextField endPosition;
+
+    private JPanel canvasPanel;
+    private JPanel rawSliderPanel;
+    private JLabel rawSliderTitle;
+    private JPanel averageSliderPanel;
+    private JLabel averageSliderTitle;
+
+    private JPanel bottomPanel;
+    private JLabel fileLengthLabel;
 
     public CharterFrame() {
         super("Charter");
@@ -50,19 +79,27 @@ public class CharterFrame extends JFrame {
 
         // build synchronized list
         values = Collections.synchronizedList(new ArrayList<>());
-        originalDataCurveCanvas = new OriginalDataCanvas(values);
-        originalDataCurveCanvas.setBounds(0, 0, 800, 600);
-        originalDataCurveCanvas.setBorder(new TitledBorder(""));
-        add(originalDataCurveCanvas);
+        averageValues = Collections.synchronizedList(new ArrayList<>());
 
-        JPanel upperPanel = new JPanel();
-        JButton chooseFileButton = new JButton("Choose File");
-        JButton startButton = new JButton("Start");
-        JButton resumeButton = new JButton("Resume");
-        JButton pauseButton = new JButton("Pause");
-        JButton stopButton = new JButton("Stop");
-        JTextField startPosition = new JTextField("0", 10);
+        // init all the components
+        originalDataCurveCanvas = new OriginalDataCanvas(values);
+        averageDataCurveCanvas = new OriginalDataCanvas(averageValues);
+        originalDataCurveCanvas.setBounds(0, 0, 800, 500);
+        averageDataCurveCanvas.setBounds(0, 0, 800, 500);
+        originalDataCurveCanvas.setBorder(new TitledBorder(""));
+        averageDataCurveCanvas.setBorder(new TitledBorder(""));
+//        add(originalDataCurveCanvas, BorderLayout.CENTER);
+
+        upperPanel = new JPanel();
+        chooseFileButton = new JButton("Choose File");
+        startButton = new JButton("Start");
+        resumeButton = new JButton("Resume");
+        pauseButton = new JButton("Pause");
+        stopButton = new JButton("Stop");
+        startPosition = new JTextField("0", 10);
+        endPosition = new JTextField("", 10);
         startPosition.setHorizontalAlignment(JTextField.RIGHT);
+        endPosition.setHorizontalAlignment(JTextField.RIGHT);
         startButton.setEnabled(false);
         resumeButton.setEnabled(false);
         pauseButton.setEnabled(false);
@@ -74,8 +111,42 @@ public class CharterFrame extends JFrame {
         upperPanel.add(stopButton);
         upperPanel.add(new JLabel("Starts From:"));
         upperPanel.add(startPosition);
-        upperPanel.add(new JLabel("th 2 Bytes"));
+        upperPanel.add(new JLabel("th Byte, "));
+        upperPanel.add(new JLabel("Ends at:"));
+        upperPanel.add(endPosition);
+        upperPanel.add(new JLabel("th Byte"));
         add(upperPanel, BorderLayout.NORTH);
+
+        canvasPanel = new JPanel();
+        canvasPanel.setLayout(new GridLayout(2, 2));
+        canvasPanel.add(originalDataCurveCanvas);
+        rawSliderPanel = new JPanel();
+        rawSliderPanel.setLayout(new BorderLayout());
+        rawSliderTitle = new JLabel("Raw Data Value");
+        rawSliderPanel.add(rawSliderTitle, BorderLayout.NORTH);
+        rawSliderPanel.add(new JLabel("" + readFrom), BorderLayout.WEST);
+        rawSliderPanel.add(new JScrollBar(JScrollBar.HORIZONTAL, (int) readFrom, 60, (int) readFrom,
+                1000), BorderLayout.CENTER);
+        rawSliderPanel.add(new JLabel("" + 1000), BorderLayout.EAST);
+        canvasPanel.add(rawSliderPanel);
+        canvasPanel.add(averageDataCurveCanvas);
+        averageSliderPanel = new JPanel();
+        averageSliderPanel.setLayout(new BorderLayout());
+        averageSliderTitle = new JLabel("Data Value's Current Average");
+        averageSliderPanel.add(averageSliderTitle, BorderLayout.NORTH);
+        averageSliderPanel.add(new JLabel("" + readFrom), BorderLayout.WEST);
+        averageSliderPanel.add(new JScrollBar(JScrollBar.HORIZONTAL, (int) readFrom, 60, (int) readFrom,
+                1000), BorderLayout.CENTER);
+        averageSliderPanel.add(new JLabel("" + 1000), BorderLayout.EAST);
+        canvasPanel.add(averageSliderPanel);
+        add(canvasPanel, BorderLayout.CENTER);
+
+        bottomPanel = new JPanel();
+        fileLengthLabel = new JLabel();
+        bottomPanel.add(new JLabel("Current File Length: "));
+        bottomPanel.add(fileLengthLabel);
+        add(bottomPanel, BorderLayout.SOUTH);
+
         setVisible(true);
 
         chooseFileButton.addActionListener(e -> {
@@ -85,6 +156,8 @@ public class CharterFrame extends JFrame {
             jfc.showDialog(new JLabel(), "Choose File");
             if (jfc.getSelectedFile() != null) {
                 file = jfc.getSelectedFile();
+                fileLengthLabel.setText(file.length() + " bytes");
+                endPosition.setText("" + file.length());
                 startButton.setEnabled(true);
                 pauseButton.setEnabled(false);
                 resumeButton.setEnabled(false);
@@ -94,18 +167,22 @@ public class CharterFrame extends JFrame {
 
         startButton.addActionListener(e -> {
             String startPosStr = startPosition.getText();
+            String endsPosStr = endPosition.getText();
             try {
                 readFrom = Long.parseLong(startPosStr);
+                endsAt = Long.parseLong(endsPosStr);
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(null, "Start Position must be integer",
+                JOptionPane.showMessageDialog(null, "Start/End Position must be integer",
                         "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+            startPosition.setEditable(false);
+            endPosition.setEditable(false);
             startButton.setEnabled(false);
             pauseButton.setEnabled(true);
             stopButton.setEnabled(true);
             chooseFileButton.setEnabled(false);
-            newFile = false;
+            readingSignal = false;
             try {
                 // get the file and starting reading and drawing
                 DrawingThread drawingThread = new DrawingThread(file, readFrom);
@@ -116,22 +193,29 @@ public class CharterFrame extends JFrame {
         });
 
         stopButton.addActionListener(e -> {
-            newFile = true;
+            readingSignal = true;
             stopButton.setEnabled(false);
             resumeButton.setEnabled(false);
             pauseButton.setEnabled(false);
             chooseFileButton.setEnabled(true);
+            startPosition.setEditable(true);
+            endPosition.setEditable(true);
             startPosition.setText("0");
             values = Collections.synchronizedList(new ArrayList<>());
+            averageValues = Collections.synchronizedList(new ArrayList<>());
+            currentAverage = 0;
+            dataSize = 0;
             originalDataCurveCanvas.setValues(values);
+            averageDataCurveCanvas.setValues(averageValues);
             originalDataCurveCanvas.repaint();
+            averageDataCurveCanvas.repaint();
         });
 
         resumeButton.addActionListener(e -> {
             resumeButton.setEnabled(false);
             stopButton.setEnabled(true);
             pauseButton.setEnabled(true);
-            newFile = false;
+            readingSignal = false;
             try {
                 DrawingThread drawingThread = new DrawingThread(file, readFrom);
                 drawingThread.start();
@@ -143,7 +227,7 @@ public class CharterFrame extends JFrame {
         pauseButton.addActionListener(e -> {
             stopButton.setEnabled(false);
             resumeButton.setEnabled(true);
-            newFile = true;
+            readingSignal = true;
         });
     }
 
@@ -153,6 +237,14 @@ public class CharterFrame extends JFrame {
             values.remove(0);
         }
         values.add(value);
+    }
+
+    private void addAverageValue(int value) {
+        if (averageValues.size() > MAX_NUMBER_OF_VALUE) {
+            averageValues.remove(0);
+        }
+        dataSize++;
+        averageValues.add(value);
     }
 
     private class DrawingThread extends Thread {
@@ -175,20 +267,27 @@ public class CharterFrame extends JFrame {
                 byte[] data = new byte[2];
                 raf.seek(readFrom);
                 while (raf.read(data) != -1) {
-                    if (newFile) {
-                        readFrom = raf.getFilePointer();
+                    if (readingSignal) {
+                        saveStart(raf.getFilePointer());
+                        break;
+                    }
+                    if (raf.getFilePointer() >= endsAt) {
+                        setConfiguresWhenReachEnd();
                         break;
                     }
                     int value = 0;
                     value += (data[0] & 0x000000ff) << 8;
                     value += (data[1] & 0x000000ff);
+                    currentAverage = ((currentAverage * dataSize) + value) / (dataSize + 1);
                     int presentedY = ORIGIN_Y - (value >> 8);
+                    int presentedAverageY = ORIGIN_Y - (currentAverage >> 8);
                     addValue(presentedY);
+                    addAverageValue(presentedAverageY);
                     System.out.println(value);
                     originalDataCurveCanvas.repaint();
-                    Thread.sleep(100);
+                    averageDataCurveCanvas.repaint();
+                    Thread.sleep(DRAWING_INTERVAL);
                 }
-                System.out.println("Thread dead");
             } catch (InterruptedException | IOException e) {
                 e.printStackTrace();
             } finally {
@@ -200,6 +299,24 @@ public class CharterFrame extends JFrame {
             }
         }
 
+    }
+
+    private void setConfiguresWhenReachEnd() {
+        pauseButton.setEnabled(false);
+        resumeButton.setEnabled(false);
+        startButton.setEnabled(false);
+        stopButton.setEnabled(false);
+        chooseFileButton.setEnabled(true);
+        clearCache();
+    }
+
+    private void clearCache() {
+        values.clear();
+        averageValues.clear();
+    }
+
+    private void saveStart(long pos) {
+        readFrom = pos;
     }
 
     public static void main(String[] args) {
