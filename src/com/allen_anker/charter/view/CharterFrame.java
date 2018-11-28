@@ -25,7 +25,7 @@ public class CharterFrame extends JFrame {
     // origin of coordinates
     private static final int BOTTOM_MARGIN = 50;
     static final int ORIGIN_X = FRAME_X;
-    static final int ORIGIN_Y = FRAME_Y + FRAME_HEIGHT - BOTTOM_MARGIN;
+    static final int ORIGIN_Y = (FRAME_Y + FRAME_HEIGHT) - BOTTOM_MARGIN;
 
     // x and y axises end points
     static final int XAxis_X = FRAME_X + FRAME_WIDTH;
@@ -40,7 +40,7 @@ public class CharterFrame extends JFrame {
 
     private boolean newFile = true;
     private File file;
-    private long readFrom;
+    private long readFrom = 0;
 
     public CharterFrame() {
         super("Charter");
@@ -93,6 +93,14 @@ public class CharterFrame extends JFrame {
         });
 
         startButton.addActionListener(e -> {
+            String startPosStr = startPosition.getText();
+            try {
+                readFrom = Long.parseLong(startPosStr);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(null, "Start Position must be integer",
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
             startButton.setEnabled(false);
             pauseButton.setEnabled(true);
             stopButton.setEnabled(true);
@@ -100,7 +108,7 @@ public class CharterFrame extends JFrame {
             newFile = false;
             try {
                 // get the file and starting reading and drawing
-                DrawingThread drawingThread = new DrawingThread(file);
+                DrawingThread drawingThread = new DrawingThread(file, readFrom);
                 drawingThread.start();
             } catch (FileNotFoundException e1) {
                 e1.printStackTrace();
@@ -113,6 +121,7 @@ public class CharterFrame extends JFrame {
             resumeButton.setEnabled(false);
             pauseButton.setEnabled(false);
             chooseFileButton.setEnabled(true);
+            startPosition.setText("0");
             values = Collections.synchronizedList(new ArrayList<>());
             originalDataCurveCanvas.setValues(values);
             originalDataCurveCanvas.repaint();
