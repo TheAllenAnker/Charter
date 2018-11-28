@@ -14,18 +14,20 @@ import java.util.List;
 public class CharterFrame extends JFrame {
     // data container
     private List<Integer> values;
-    private static final int MAX_COUNT_OF_DATA = 50;
+    private static final int MAX_COUNT_OF_DATA = 80;
 
     private MyCanvas dataCurveCanvas = new MyCanvas();
     // frame start point
+    // FRAME_X and FRAME_Y is also the left and top margin of the coordinates respectively
     private final int FRAME_X = 120;
     private final int FRAME_Y = 300;
     private final int FRAME_WIDTH = 600;
     private final int FRAME_HEIGHT = 250;
 
     // origin of coordinates
+    private final int BOTTOM_MARGIN = 50;
     private final int ORIGIN_X = FRAME_X;
-    private final int ORIGIN_Y = FRAME_Y + FRAME_HEIGHT - 50;
+    private final int ORIGIN_Y = FRAME_Y + FRAME_HEIGHT - BOTTOM_MARGIN;
 
     // x and y axises end points
     private final int XAxis_X = FRAME_X + FRAME_WIDTH;
@@ -52,7 +54,8 @@ public class CharterFrame extends JFrame {
         add(uppperPanel, BorderLayout.NORTH);
         setVisible(true);
 
-        values = Collections.synchronizedList(new ArrayList<>());// 防止引起线程异常
+        // build synchronized list
+        values = Collections.synchronizedList(new ArrayList<>());
         chooseFileButton.addActionListener(e -> {
             JFileChooser jfc = new JFileChooser();
             jfc.setFileSelectionMode(JFileChooser.FILES_ONLY);
@@ -67,9 +70,14 @@ public class CharterFrame extends JFrame {
                     new Thread(() -> {
                         try {
                             int length;
-                            while ((length = finalFis.read()) != -1) {
-                                System.out.println(length);
-                                addValue(500 - length);
+                            byte[] data = new byte[2];
+                            while ((length = finalFis.read(data)) != -1) {
+                                int value = 0;
+                                value += (data[0] & 0x000000ff) << 8;
+                                value += (data[1] & 0x000000ff);
+                                int presentedY = ORIGIN_Y - (value >> 8);
+                                addValue(presentedY);
+                                System.out.println(value);
                                 dataCurveCanvas.repaint();
                                 Thread.sleep(100);
                             }
@@ -112,48 +120,46 @@ public class CharterFrame extends JFrame {
 
             // drawing configurations
             g2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            int xDelta = XAxis_X / MAX_COUNT_OF_DATA;
-            int length = values.size() - 10;
-
-            for (int i = 0; i < length - 1; ++i) {
-                g2D.drawLine(xDelta * (MAX_COUNT_OF_DATA - length + i), values.get(i),
-                        xDelta * (MAX_COUNT_OF_DATA - length + i + 1), values.get(i + 1));
+            // draw the current data read in the list
+            int xDelta = FRAME_WIDTH / MAX_COUNT_OF_DATA;
+            int length = values.size();
+            for (int i = 0; i < values.size() - 1; ++i) {
+                g2D.drawLine(FRAME_X + xDelta * (i), values.get(i),
+                        FRAME_X + xDelta * (i + 1), values.get(i + 1));
             }
-            // 画坐标轴
-            g2D.setStroke(new BasicStroke(Float.parseFloat("2.0F")));// 轴线粗度
-            // X轴以及方向箭头
-            g.drawLine(ORIGIN_X, ORIGIN_Y, XAxis_X, XAxis_Y);// x轴线的轴线
-            g.drawLine(XAxis_X, XAxis_Y, XAxis_X - 5, XAxis_Y - 5);// 上边箭头
-            g.drawLine(XAxis_X, XAxis_Y, XAxis_X + 5, XAxis_Y + 5);// 下边箭头
+            // set drawing configuration (roughness)
+            g2D.setStroke(new BasicStroke(Float.parseFloat("2.0F")));
+            // draw x-axis and the arrow
+            g.drawLine(ORIGIN_X, ORIGIN_Y, XAxis_X, XAxis_Y);
+            g.drawLine(XAxis_X, XAxis_Y, XAxis_X - 5, XAxis_Y - 5);
+            g.drawLine(XAxis_X, XAxis_Y, XAxis_X - 5, XAxis_Y + 5);
 
-            // Y轴以及方向箭头
+            // draw y-axis and the arrow
             g.drawLine(ORIGIN_X, ORIGIN_Y, YAxis_X, YAxis_Y);
             g.drawLine(YAxis_X, YAxis_Y, YAxis_X - 5, YAxis_Y + 5);
             g.drawLine(YAxis_X, YAxis_Y, YAxis_X + 5, YAxis_Y + 5);
 
-            // 画X轴上的时间刻度（从坐标轴原点起，每隔TIME_INTERVAL(时间分度)像素画一时间点，到X轴终点止）
+            // set drawing configurations
             g.setColor(Color.BLUE);
             g2D.setStroke(new BasicStroke(Float.parseFloat("1.0f")));
 
-            // X轴刻度依次变化情况
+            // draw the values on x-axis
             for (int i = ORIGIN_X, j = 0; i < XAxis_X; i += TIME_INTERVAL, j += TIME_INTERVAL) {
                 g.drawString(" " + j, i - 10, ORIGIN_Y + 20);
             }
             g.drawString("Stream", XAxis_X + 5, XAxis_Y + 5);
 
-            // 画Y轴上血压刻度（从坐标原点起，每隔10像素画一压力值，到Y轴终点止）
+            // draw teh values on y-axis
             for (int i = ORIGIN_Y, j = 0; i > YAxis_Y; i -= DATA_INTERVAL, j += TIME_INTERVAL) {
                 g.drawString(j + " ", ORIGIN_X - 30, i + 3);
             }
-            g.drawString("Data", YAxis_X - 5, YAxis_Y - 5);// 血压刻度小箭头值
+            g.drawString("Value", YAxis_X - 5, YAxis_Y - 5);
             /*
-            // 画网格线
+            // draw the grid
             g.setColor(Color.BLACK);
-            // 坐标内部横线
             for (int i = ORIGIN_Y; i > YAxis_Y; i -= DATA_INTERVAL) {
                 g.drawLine(ORIGIN_X, i, ORIGIN_X + 10 * TIME_INTERVAL, i);
             }
-            // 坐标内部竖线
             for (int i = ORIGIN_X; i < XAxis_X; i += TIME_INTERVAL) {
                 g.drawLine(i, ORIGIN_Y, i, ORIGIN_Y - 6 * DATA_INTERVAL);
             }
