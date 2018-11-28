@@ -11,34 +11,36 @@ import java.util.List;
 public class CharterFrame extends JFrame {
     // data container
     private List<Integer> values;
-    private OringinalDataCanvas originalDataCurveCanvas;
+    private OriginalDataCanvas originalDataCurveCanvas;
 
-    public static final int MAX_NUMBER_OF_VALUE = 120;
+    static final int MAX_NUMBER_OF_VALUE = 120;
 
     // frame start point
     // FRAME_X and FRAME_Y is also the left and top margin of the coordinates respectively
-    public static final int FRAME_X = 40;
-    public static final int FRAME_Y = 180;
-    public static final int FRAME_WIDTH = 600;
-    public static final int FRAME_HEIGHT = 250;
+    static final int FRAME_X = 40;
+    private static final int FRAME_Y = 180;
+    static final int FRAME_WIDTH = 600;
+    private static final int FRAME_HEIGHT = 250;
 
     // origin of coordinates
-    public static final int BOTTOM_MARGIN = 50;
-    public static final int ORIGIN_X = FRAME_X;
-    public static final int ORIGIN_Y = FRAME_Y + FRAME_HEIGHT - BOTTOM_MARGIN;
+    private static final int BOTTOM_MARGIN = 50;
+    static final int ORIGIN_X = FRAME_X;
+    static final int ORIGIN_Y = FRAME_Y + FRAME_HEIGHT - BOTTOM_MARGIN;
 
     // x and y axises end points
-    public static final int XAxis_X = FRAME_X + FRAME_WIDTH;
-    public static final int XAxis_Y = ORIGIN_Y;
-    public static final int YAxis_X = ORIGIN_X;
-    public static final int YAxis_Y = FRAME_Y - 150;
+    static final int XAxis_X = FRAME_X + FRAME_WIDTH;
+    static final int XAxis_Y = ORIGIN_Y;
+    static final int YAxis_X = ORIGIN_X;
+    static final int YAxis_Y = FRAME_Y - 150;
     // interval in x and y axises
-    public static final int TIME_INTERVAL = 50;
-    public static final int DATA_INTERVAL = 50;
-    public static final int X_VALUE_MARGIN = 20;
-    public static final int Y_VALUE_MARGIN = 30;
+    static final int TIME_INTERVAL = 50;
+    static final int DATA_INTERVAL = 50;
+    static final int X_VALUE_MARGIN = 20;
+    static final int Y_VALUE_MARGIN = 30;
 
-    public boolean isReading = true;
+    private boolean newFile = true;
+    private File file;
+    private long readFrom;
 
     public CharterFrame() {
         super("Charter");
@@ -48,59 +50,91 @@ public class CharterFrame extends JFrame {
 
         // build synchronized list
         values = Collections.synchronizedList(new ArrayList<>());
-        originalDataCurveCanvas = new OringinalDataCanvas(values);
+        originalDataCurveCanvas = new OriginalDataCanvas(values);
         originalDataCurveCanvas.setBounds(0, 0, 800, 600);
         originalDataCurveCanvas.setBorder(new TitledBorder(""));
         add(originalDataCurveCanvas);
 
-        JPanel uppperPanel = new JPanel();
+        JPanel upperPanel = new JPanel();
         JButton chooseFileButton = new JButton("Choose File");
+        JButton startButton = new JButton("Start");
         JButton resumeButton = new JButton("Resume");
+        JButton pauseButton = new JButton("Pause");
         JButton stopButton = new JButton("Stop");
+        JTextField startPosition = new JTextField("0", 10);
+        startPosition.setHorizontalAlignment(JTextField.RIGHT);
+        startButton.setEnabled(false);
         resumeButton.setEnabled(false);
+        pauseButton.setEnabled(false);
         stopButton.setEnabled(false);
-        uppperPanel.add(chooseFileButton);
-        uppperPanel.add(resumeButton);
-        uppperPanel.add(stopButton);
-        uppperPanel.add(new JLabel("Starts From:"));
-        uppperPanel.add(new JTextField("Start position"));
-        uppperPanel.add(new JLabel("th 2 Bytes"));
-        add(uppperPanel, BorderLayout.NORTH);
+        upperPanel.add(chooseFileButton);
+        upperPanel.add(startButton);
+        upperPanel.add(pauseButton);
+        upperPanel.add(resumeButton);
+        upperPanel.add(stopButton);
+        upperPanel.add(new JLabel("Starts From:"));
+        upperPanel.add(startPosition);
+        upperPanel.add(new JLabel("th 2 Bytes"));
+        add(upperPanel, BorderLayout.NORTH);
         setVisible(true);
-
-        stopButton.addActionListener(e -> {
-            if (isReading) {
-                isReading = false;
-                stopButton.setEnabled(false);
-                resumeButton.setEnabled(true);
-            }
-        });
-
-        resumeButton.addActionListener(e -> {
-            if (!isReading) {
-                isReading = true;
-                resumeButton.setEnabled(false);
-                stopButton.setEnabled(true);
-            }
-        });
 
         chooseFileButton.addActionListener(e -> {
             JFileChooser jfc = new JFileChooser();
             jfc.setFileSelectionMode(JFileChooser.FILES_ONLY);
             jfc.setFileHidingEnabled(true);
             jfc.showDialog(new JLabel(), "Choose File");
-            File file = jfc.getSelectedFile();
-            if (file != null) {
-                stopButton.setEnabled(true);
-                try {
-                    // get the file and starting reading and drawing
-                    DrawingThread drawingThread = new DrawingThread(file);
-                    drawingThread.start();
-                } catch (FileNotFoundException e1) {
-                    e1.printStackTrace();
-                }
-
+            if (jfc.getSelectedFile() != null) {
+                file = jfc.getSelectedFile();
+                startButton.setEnabled(true);
+                pauseButton.setEnabled(false);
+                resumeButton.setEnabled(false);
+                stopButton.setEnabled(false);
             }
+        });
+
+        startButton.addActionListener(e -> {
+            startButton.setEnabled(false);
+            pauseButton.setEnabled(true);
+            stopButton.setEnabled(true);
+            chooseFileButton.setEnabled(false);
+            newFile = false;
+            try {
+                // get the file and starting reading and drawing
+                DrawingThread drawingThread = new DrawingThread(file);
+                drawingThread.start();
+            } catch (FileNotFoundException e1) {
+                e1.printStackTrace();
+            }
+        });
+
+        stopButton.addActionListener(e -> {
+            newFile = true;
+            stopButton.setEnabled(false);
+            resumeButton.setEnabled(false);
+            pauseButton.setEnabled(false);
+            chooseFileButton.setEnabled(true);
+            values = Collections.synchronizedList(new ArrayList<>());
+            originalDataCurveCanvas.setValues(values);
+            originalDataCurveCanvas.repaint();
+        });
+
+        resumeButton.addActionListener(e -> {
+            resumeButton.setEnabled(false);
+            stopButton.setEnabled(true);
+            pauseButton.setEnabled(true);
+            newFile = false;
+            try {
+                DrawingThread drawingThread = new DrawingThread(file, readFrom);
+                drawingThread.start();
+            } catch (FileNotFoundException e1) {
+                e1.printStackTrace();
+            }
+        });
+
+        pauseButton.addActionListener(e -> {
+            stopButton.setEnabled(false);
+            resumeButton.setEnabled(true);
+            newFile = true;
         });
     }
 
@@ -114,18 +148,28 @@ public class CharterFrame extends JFrame {
 
     private class DrawingThread extends Thread {
         private RandomAccessFile raf;
-        private FileInputStream fis;
+        private long readFrom;
 
-        public DrawingThread(File file) throws FileNotFoundException {
-            this.fis = new FileInputStream(file);
+        DrawingThread(File file) throws FileNotFoundException {
             this.raf = new RandomAccessFile(file, "r");
+            this.readFrom = 0;
+        }
+
+        DrawingThread(File file, long start) throws FileNotFoundException {
+            this.raf = new RandomAccessFile(file, "r");
+            this.readFrom = start;
         }
 
         @Override
         public void run() {
             try {
                 byte[] data = new byte[2];
-                while (fis.read(data) != -1 && isReading) {
+                raf.seek(readFrom);
+                while (raf.read(data) != -1) {
+                    if (newFile) {
+                        readFrom = raf.getFilePointer();
+                        break;
+                    }
                     int value = 0;
                     value += (data[0] & 0x000000ff) << 8;
                     value += (data[1] & 0x000000ff);
@@ -135,20 +179,18 @@ public class CharterFrame extends JFrame {
                     originalDataCurveCanvas.repaint();
                     Thread.sleep(100);
                 }
-            } catch (InterruptedException | IOException e1) {
-                e1.printStackTrace();
+                System.out.println("Thread dead");
+            } catch (InterruptedException | IOException e) {
+                e.printStackTrace();
             } finally {
                 try {
-                    fis.close();
-                } catch (IOException e1) {
-                    e1.printStackTrace();
+                    raf.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }
-    }
 
-    public List<Integer> getValues() {
-        return values;
     }
 
     public static void main(String[] args) {

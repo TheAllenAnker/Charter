@@ -43,14 +43,17 @@ public class DrawingCanvas extends JPanel {
         g2D.setStroke(new BasicStroke(Float.parseFloat("1.0f")));
 
         // draw the values on x-axis
-        for (int i = CharterFrame.ORIGIN_X, j = 0; i <= CharterFrame.XAxis_X; i += CharterFrame.TIME_INTERVAL, j += CharterFrame.TIME_INTERVAL) {
+        for (int i = CharterFrame.ORIGIN_X, j = 0; i <= CharterFrame.XAxis_X; i += CharterFrame.TIME_INTERVAL,
+                j += CharterFrame.TIME_INTERVAL) {
             g.drawString("" + j, i, CharterFrame.ORIGIN_Y + CharterFrame.X_VALUE_MARGIN);
         }
         g.drawString("Number of 2Bytes", CharterFrame.XAxis_X + 5, CharterFrame.XAxis_Y + 5);
-        g.drawString(CharterFrame.MAX_NUMBER_OF_VALUE * 2 + " Bytes in Window", CharterFrame.XAxis_X + 5, CharterFrame.XAxis_Y - 8);
+        g.drawString(CharterFrame.MAX_NUMBER_OF_VALUE * 2 + " Bytes in the Window", CharterFrame.XAxis_X + 5,
+                CharterFrame.XAxis_Y - 8);
 
         // draw the values on y-axis
-        for (int i = CharterFrame.ORIGIN_Y, j = 0; i > CharterFrame.YAxis_Y; i -= CharterFrame.DATA_INTERVAL, j += CharterFrame.TIME_INTERVAL) {
+        for (int i = CharterFrame.ORIGIN_Y, j = 0; i > CharterFrame.YAxis_Y; i -= CharterFrame.DATA_INTERVAL,
+                j += CharterFrame.TIME_INTERVAL) {
             g.drawString((j << 8) + "", CharterFrame.ORIGIN_X - CharterFrame.Y_VALUE_MARGIN, i);
         }
         g.drawString("Value of the Two Bytes", CharterFrame.YAxis_X - 5, CharterFrame.YAxis_Y - 5);
@@ -62,5 +65,13 @@ public class DrawingCanvas extends JPanel {
         for (int i = CharterFrame.ORIGIN_X; i <= CharterFrame.XAxis_X; i += CharterFrame.TIME_INTERVAL) {
             g.drawLine(i, CharterFrame.ORIGIN_Y, i, CharterFrame.ORIGIN_Y - 6 * CharterFrame.DATA_INTERVAL);
         }
+    }
+
+    public void setValues(List<Integer> values) {
+        this.values = values;
+    }
+
+    public List<Integer> getValues() {
+        return values;
     }
 }
