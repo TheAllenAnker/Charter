@@ -70,8 +70,4 @@ public class DrawingCanvas extends JPanel {
     public void setValues(List<Integer> values) {
         this.values = values;
     }
-
-    public List<Integer> getValues() {
-        return values;
-    }
 }

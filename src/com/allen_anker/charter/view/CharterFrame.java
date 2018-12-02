@@ -51,7 +51,7 @@ public class CharterFrame extends JFrame {
     private long endsAt = 0;
 
     private OriginalDataCanvas originalDataCurveCanvas;
-    private OriginalDataCanvas averageDataCurveCanvas;
+    private AverageDataCanvas averageDataCurveCanvas;
 
     private JPanel upperPanel;
     private JButton chooseFileButton;
@@ -63,10 +63,10 @@ public class CharterFrame extends JFrame {
     private JTextField endPosition;
 
     private JPanel canvasPanel;
-    private JPanel rawSliderPanel;
-    private JLabel rawSliderTitle;
-    private JPanel averageSliderPanel;
-    private JLabel averageSliderTitle;
+//    private JPanel rawSliderPanel;
+//    private JLabel rawSliderTitle;
+//    private JPanel averageSliderPanel;
+//    private JLabel averageSliderTitle;
 
     private JPanel bottomPanel;
     private JLabel fileLengthLabel;
@@ -83,7 +83,7 @@ public class CharterFrame extends JFrame {
 
         // init all the components
         originalDataCurveCanvas = new OriginalDataCanvas(values);
-        averageDataCurveCanvas = new OriginalDataCanvas(averageValues);
+        averageDataCurveCanvas = new AverageDataCanvas(averageValues);
         originalDataCurveCanvas.setBounds(0, 0, 800, 500);
         averageDataCurveCanvas.setBounds(0, 0, 800, 500);
         originalDataCurveCanvas.setBorder(new TitledBorder(""));
@@ -109,7 +109,7 @@ public class CharterFrame extends JFrame {
         upperPanel.add(pauseButton);
         upperPanel.add(resumeButton);
         upperPanel.add(stopButton);
-        upperPanel.add(new JLabel("Starts From:"));
+        upperPanel.add(new JLabel("Starts from:"));
         upperPanel.add(startPosition);
         upperPanel.add(new JLabel("th Byte, "));
         upperPanel.add(new JLabel("Ends at:"));
@@ -120,25 +120,24 @@ public class CharterFrame extends JFrame {
         canvasPanel = new JPanel();
         canvasPanel.setLayout(new GridLayout(2, 2));
         canvasPanel.add(originalDataCurveCanvas);
-        rawSliderPanel = new JPanel();
-        rawSliderPanel.setLayout(new BorderLayout());
-        rawSliderTitle = new JLabel("Raw Data Value");
-        rawSliderPanel.add(rawSliderTitle, BorderLayout.NORTH);
-        rawSliderPanel.add(new JLabel("" + readFrom), BorderLayout.WEST);
-        rawSliderPanel.add(new JScrollBar(JScrollBar.HORIZONTAL, (int) readFrom, 60, (int) readFrom,
-                1000), BorderLayout.CENTER);
-        rawSliderPanel.add(new JLabel("" + 1000), BorderLayout.EAST);
-        canvasPanel.add(rawSliderPanel);
+//        rawSliderPanel = new JPanel();
+//        rawSliderPanel.setLayout(new BorderLayout());
+//        rawSliderTitle = new JLabel("Raw Data Value");
+//        rawSliderPanel.add(rawSliderTitle, BorderLayout.NORTH);
+//        rawSliderPanel.add(new JLabel("" + readFrom), BorderLayout.WEST);
+//        rawSliderPanel.add(new JScrollBar(JScrollBar.HORIZONTAL, (int) readFrom, 60, (int) readFrom,
+//                1000), BorderLayout.CENTER);
+//        rawSliderPanel.add(new JLabel("" + 1000), BorderLayout.EAST);
         canvasPanel.add(averageDataCurveCanvas);
-        averageSliderPanel = new JPanel();
-        averageSliderPanel.setLayout(new BorderLayout());
-        averageSliderTitle = new JLabel("Data Value's Current Average");
-        averageSliderPanel.add(averageSliderTitle, BorderLayout.NORTH);
-        averageSliderPanel.add(new JLabel("" + readFrom), BorderLayout.WEST);
-        averageSliderPanel.add(new JScrollBar(JScrollBar.HORIZONTAL, (int) readFrom, 60, (int) readFrom,
-                1000), BorderLayout.CENTER);
-        averageSliderPanel.add(new JLabel("" + 1000), BorderLayout.EAST);
-        canvasPanel.add(averageSliderPanel);
+//        averageSliderPanel = new JPanel();
+//        averageSliderPanel.setLayout(new BorderLayout());
+//        averageSliderTitle = new JLabel("Data Value's Current Average");
+//        averageSliderPanel.add(averageSliderTitle, BorderLayout.NORTH);
+//        averageSliderPanel.add(new JLabel("" + readFrom), BorderLayout.WEST);
+//        averageSliderPanel.add(new JScrollBar(JScrollBar.HORIZONTAL, (int) readFrom, 60, (int) readFrom,
+//                1000), BorderLayout.CENTER);
+//        averageSliderPanel.add(new JLabel("" + 1000), BorderLayout.EAST);
+//        canvasPanel.add(averageSliderPanel);
         add(canvasPanel, BorderLayout.CENTER);
 
         bottomPanel = new JPanel();
@@ -283,7 +282,6 @@ public class CharterFrame extends JFrame {
                     int presentedAverageY = ORIGIN_Y - (currentAverage >> 8);
                     addValue(presentedY);
                     addAverageValue(presentedAverageY);
-                    System.out.println(value);
                     originalDataCurveCanvas.repaint();
                     averageDataCurveCanvas.repaint();
                     Thread.sleep(DRAWING_INTERVAL);
