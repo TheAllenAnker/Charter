@@ -45,14 +45,17 @@ public class CharterFrame extends JFrame {
 
     private static final int DRAWING_INTERVAL = 100;
 
+    // control the reading process, pause/resume
     private boolean readingSignal = true;
     private File file;
+    // where to start and end when a file is chosen to be read
     private long readFrom = 0;
     private long endsAt = 0;
 
     private OriginalDataCanvas originalDataCurveCanvas;
     private AverageDataCanvas averageDataCurveCanvas;
 
+    // components in the main frame
     private JPanel upperPanel;
     private JButton chooseFileButton;
     private JButton startButton;
@@ -88,7 +91,6 @@ public class CharterFrame extends JFrame {
         averageDataCurveCanvas.setBounds(0, 0, 800, 500);
         originalDataCurveCanvas.setBorder(new TitledBorder(""));
         averageDataCurveCanvas.setBorder(new TitledBorder(""));
-//        add(originalDataCurveCanvas, BorderLayout.CENTER);
 
         upperPanel = new JPanel();
         chooseFileButton = new JButton("Choose File");
@@ -120,24 +122,6 @@ public class CharterFrame extends JFrame {
         canvasPanel = new JPanel();
         canvasPanel.setLayout(new GridLayout(2, 2));
         canvasPanel.add(originalDataCurveCanvas);
-//        rawSliderPanel = new JPanel();
-//        rawSliderPanel.setLayout(new BorderLayout());
-//        rawSliderTitle = new JLabel("Raw Data Value");
-//        rawSliderPanel.add(rawSliderTitle, BorderLayout.NORTH);
-//        rawSliderPanel.add(new JLabel("" + readFrom), BorderLayout.WEST);
-//        rawSliderPanel.add(new JScrollBar(JScrollBar.HORIZONTAL, (int) readFrom, 60, (int) readFrom,
-//                1000), BorderLayout.CENTER);
-//        rawSliderPanel.add(new JLabel("" + 1000), BorderLayout.EAST);
-        canvasPanel.add(averageDataCurveCanvas);
-//        averageSliderPanel = new JPanel();
-//        averageSliderPanel.setLayout(new BorderLayout());
-//        averageSliderTitle = new JLabel("Data Value's Current Average");
-//        averageSliderPanel.add(averageSliderTitle, BorderLayout.NORTH);
-//        averageSliderPanel.add(new JLabel("" + readFrom), BorderLayout.WEST);
-//        averageSliderPanel.add(new JScrollBar(JScrollBar.HORIZONTAL, (int) readFrom, 60, (int) readFrom,
-//                1000), BorderLayout.CENTER);
-//        averageSliderPanel.add(new JLabel("" + 1000), BorderLayout.EAST);
-//        canvasPanel.add(averageSliderPanel);
         add(canvasPanel, BorderLayout.CENTER);
 
         bottomPanel = new JPanel();
@@ -265,18 +249,21 @@ public class CharterFrame extends JFrame {
             try {
                 byte[] data = new byte[2];
                 raf.seek(readFrom);
+                // continue reading until the file end
                 while (raf.read(data) != -1) {
+                    // if the reading process is paused, save the current position for later restart
                     if (readingSignal) {
                         saveStart(raf.getFilePointer());
                         break;
                     }
+                    // the reading process must not read beyond the end position which is set before start reading
                     if (raf.getFilePointer() >= endsAt) {
                         setConfiguresWhenReachEnd();
                         break;
                     }
                     int value = 0;
-                    value += (data[0] & 0x000000ff) << 8;
-                    value += (data[1] & 0x000000ff);
+                    value += (data[0] & 0xff) << 8;
+                    value += (data[1] & 0xff);
                     currentAverage = ((currentAverage * dataSize) + value) / (dataSize + 1);
                     int presentedY = ORIGIN_Y - (value >> 8);
                     int presentedAverageY = ORIGIN_Y - (currentAverage >> 8);
@@ -299,6 +286,7 @@ public class CharterFrame extends JFrame {
 
     }
 
+    // when the file reading pointer read to the end, this method is called
     private void setConfiguresWhenReachEnd() {
         pauseButton.setEnabled(false);
         resumeButton.setEnabled(false);
