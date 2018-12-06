@@ -122,6 +122,7 @@ public class CharterFrame extends JFrame {
         canvasPanel = new JPanel();
         canvasPanel.setLayout(new GridLayout(2, 2));
         canvasPanel.add(originalDataCurveCanvas);
+        canvasPanel.add(averageDataCurveCanvas);
         add(canvasPanel, BorderLayout.CENTER);
 
         bottomPanel = new JPanel();
